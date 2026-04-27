@@ -6,6 +6,7 @@ import {
   ADDRESSES,
   SUBSCRIPTION_ABI,
   DISCLOSURE_ABI,
+  MOCKCUSDT_ABI,
   formatUSDT,
 } from "@/lib/contracts";
 import type { Round } from "@/lib/hooks/useRound";
@@ -27,6 +28,17 @@ export function InvestorView({ round, decryptedAmount, isDecrypting, onDecrypt }
   const [shareStatus, setShareStatus] = useState<"idle" | "pending" | "done">("idle");
 
   async function handleSubscribe() {
+    // Step 1: grant operator access (ERC-7984 replaces encrypted approve)
+    // uint48 expiry — 24 hours from now
+    const until = Math.floor(Date.now() / 1000) + 86400;
+    await writeContractAsync({
+      address:      ADDRESSES.MockcUSDT,
+      abi:          MOCKCUSDT_ABI,
+      functionName: "setOperator",
+      args:         [ADDRESSES.Subscription, until],
+    });
+
+    // Step 2: subscribe — cUSDT.confidentialTransferFrom happens inside
     await writeContractAsync({
       address:      ADDRESSES.Subscription,
       abi:          SUBSCRIPTION_ABI,

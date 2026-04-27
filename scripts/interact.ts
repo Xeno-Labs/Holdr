@@ -123,21 +123,13 @@ async function main() {
   );
   console.log(`   investor[0] sees: ${fmt(myAlloc)} ✓`);
 
-  // ── 6. Each investor approves subscription + subscribes ────────────────────
-  console.log("\n【6】 Investors approving + subscribing...");
+  // ── 6. Each investor grants operator access + subscribes ───────────────────
+  // ERC-7984: setOperator replaces encrypted approve — no FHE needed for this step.
+  console.log("\n【6】 Investors setting operator + subscribing...");
+  const operatorUntil = Math.floor(Date.now() / 1000) + 86400; // 24 h
   for (let i = 0; i < investors.length; i++) {
-    // Approve subscription contract for allocation amount
-    const encApproval = await fhevm
-      .createEncryptedInput(deployed.MockcUSDT, investors[i].address)
-      .add64(ALLOCATIONS[i])
-      .encrypt();
-
     await (
-      await mockCUSDT.connect(investors[i]).approve(
-        subAddr,
-        encApproval.handles[0],
-        encApproval.inputProof
-      )
+      await mockCUSDT.connect(investors[i]).setOperator(subAddr, operatorUntil)
     ).wait();
 
     await (await subscription.connect(investors[i]).subscribe(roundId)).wait();

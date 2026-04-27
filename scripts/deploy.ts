@@ -16,8 +16,10 @@ import * as path from "path";
  *   cUSDTMock (their own): 0x4E7B06D78965594eB5EF5414c357ca21E1554491  (not used — interface mismatch)
  */
 
-// Zama's mock USDT on Sepolia — has a public `mint(address, uint256)` with a 1M cap per call.
-const ZAMA_SEPOLIA_MOCK_USDT = "0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0";
+// Zama's official Sepolia confidential token addresses
+// Source: https://docs.zama.org/protocol/protocol-apps/addresses/testnet/sepolia
+const ZAMA_SEPOLIA_MOCK_USDT  = "0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0"; // underlying ERC-20 (public mint 1M/call)
+const ZAMA_SEPOLIA_CUSDT_MOCK = "0x4E7B06D78965594eB5EF5414c357ca21E1554491"; // ERC-7984 wrapper (IConfidentialERC20-compatible)
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -29,12 +31,17 @@ async function main() {
   console.log("Deploying with:", deployer.address);
   console.log("Balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "ETH\n");
 
-  // ── 1. MockUSDT (underlying plaintext token) ───────────────────────────────
+  // ── 1 & 2. Token setup ────────────────────────────────────────────────────
+  // Sepolia: use Zama's already-deployed ERC-7984 cUSDTMock — no deploys needed.
+  // Local:   deploy MockUSDT + our MockcUSDT wrapper (same IConfidentialERC20 interface).
   let mockUSDTAddress: string;
+  let cUSDTAddress: string;
+
   if (isSepolia) {
-    // Reuse Zama's already-deployed mock USDT — free public mint, no gas wasted.
     mockUSDTAddress = ZAMA_SEPOLIA_MOCK_USDT;
-    console.log("MockUSDT: using Zama Sepolia mock at", mockUSDTAddress, "(skipping deploy)");
+    cUSDTAddress    = ZAMA_SEPOLIA_CUSDT_MOCK;
+    console.log("cUSDT: using Zama Sepolia cUSDTMock at", cUSDTAddress, "(skipping deploy)");
+    console.log("MockUSDT underlying:", mockUSDTAddress);
   } else {
     console.log("Deploying MockUSDT...");
     const MockUSDT = await ethers.getContractFactory("MockUSDT");
@@ -42,16 +49,14 @@ async function main() {
     await mockUSDT.waitForDeployment();
     mockUSDTAddress = await mockUSDT.getAddress();
     console.log("  MockUSDT:", mockUSDTAddress);
-  }
 
-  // ── 2. MockcUSDT (our FHE-encrypted wrapper) ───────────────────────────────
-  // We always deploy our own wrapper so Subscription.sol's transferFrom interface
-  // is consistent across networks. It simply wraps whichever underlying is above.
-  console.log("Deploying MockcUSDT...");
-  const MockcUSDT = await ethers.getContractFactory("MockcUSDT");
-  const mockCUSDT = await MockcUSDT.deploy(mockUSDTAddress);
-  await mockCUSDT.waitForDeployment();
-  const cUSDTAddress = await mockCUSDT.getAddress();
+    console.log("Deploying MockcUSDT...");
+    const MockcUSDT = await ethers.getContractFactory("MockcUSDT");
+    const mockCUSDT = await MockcUSDT.deploy(mockUSDTAddress);
+    await mockCUSDT.waitForDeployment();
+    cUSDTAddress = await mockCUSDT.getAddress();
+    console.log("  MockcUSDT:", cUSDTAddress);
+  }
   console.log("  MockcUSDT:", cUSDTAddress);
 
   // ── 3. RoundFactory ────────────────────────────────────────────────────────
@@ -151,9 +156,11 @@ async function main() {
     chainId,
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
-    MockUSDT: mockUSDTAddress,
-    MockUSDT_note: isSepolia ? "Zama official mock — not deployed by us" : "deployed by us",
+    MockUSDT:  mockUSDTAddress,
     MockcUSDT: cUSDTAddress,
+    cUSDT_note: isSepolia
+      ? "Zama official cUSDTMock (ERC-7984) — not deployed by us"
+      : "our MockcUSDT (ERC-7984 compatible) — deployed by us",
     RoundFactory: roundFactoryAddress,
     Allocations: allocationsAddress,
     Subscription: subscriptionAddress,

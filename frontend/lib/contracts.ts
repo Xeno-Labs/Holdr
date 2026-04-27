@@ -187,6 +187,7 @@ export const SUBSCRIPTION_ABI = [
 ] as const;
 
 export const MOCKCUSDT_ABI = [
+  // ── Local-only: wrap/unwrap plaintext USDT ──────────────────────────────
   {
     name: "wrap",
     type: "function",
@@ -195,22 +196,71 @@ export const MOCKCUSDT_ABI = [
     outputs: [],
   },
   {
-    name: "approve",
+    name: "unwrap",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint64" }],
+    outputs: [],
+  },
+  // ── ERC-7984 / IConfidentialERC20 ──────────────────────────────────────
+  // Works on both our MockcUSDT (local) and Zama's cUSDTMock (Sepolia)
+  {
+    // Replaces `approve` — grants operator permission until a Unix timestamp
+    name: "setOperator",
     type: "function",
     stateMutability: "nonpayable",
     inputs: [
-      { name: "spender",    type: "address" },
-      { name: "encAmount",  type: "bytes32" },
-      { name: "inputProof", type: "bytes"   },
+      { name: "operator", type: "address" },
+      { name: "until",    type: "uint48"  },
     ],
     outputs: [],
   },
   {
-    name: "balanceOf",
+    name: "isOperator",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "holder",  type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "confidentialBalanceOf",
     type: "function",
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],
     outputs: [{ name: "", type: "bytes32" }],
+  },
+  {
+    name: "confidentialTransfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to",     type: "address" },
+      { name: "amount", type: "bytes32" },
+    ],
+    outputs: [{ name: "transferred", type: "bytes32" }],
+  },
+  {
+    name: "confidentialTransferFrom",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "from",   type: "address" },
+      { name: "to",     type: "address" },
+      { name: "amount", type: "bytes32" },
+    ],
+    outputs: [{ name: "transferred", type: "bytes32" }],
+  },
+  {
+    name: "OperatorSet",
+    type: "event",
+    inputs: [
+      { name: "holder",   type: "address", indexed: true },
+      { name: "operator", type: "address", indexed: true },
+      { name: "until",    type: "uint48",  indexed: false },
+    ],
   },
 ] as const;
 
