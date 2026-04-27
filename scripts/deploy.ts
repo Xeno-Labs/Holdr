@@ -125,6 +125,10 @@ async function main() {
   await tx.wait();
   console.log("  Allocations.setSubscriptionContract ✓");
 
+  tx = await allocations.setDisclosureContract(disclosureAddress);
+  await tx.wait();
+  console.log("  Allocations.setDisclosureContract ✓");
+
   // ── Write addresses ────────────────────────────────────────────────────────
   const addresses = {
     network: (await ethers.provider.getNetwork()).name,

@@ -17,6 +17,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@fhevm/hardhat-plugin": "^0.4.2",
     "@nomicfoundation/hardhat-toolbox": "^6.1.2",
     "@nomicfoundation/hardhat-verify": "^2.1.3",
     "@types/node": "^25.6.0",
@@ -27,7 +28,6 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.6.1",
-    "fhevm": "^0.6.2",
-    "fhevm-contracts": "^0.2.4"
+    "fhevm": "^0.6.2"
   }
 }

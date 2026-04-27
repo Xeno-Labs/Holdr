@@ -1,5 +1,6 @@
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-verify";
+import "@fhevm/hardhat-plugin";
 import "dotenv/config";
 import { HardhatUserConfig } from "hardhat/config";
 
@@ -10,10 +11,7 @@ const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.24",
     settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
+      optimizer: { enabled: true, runs: 200 },
       evmVersion: "cancun",
     },
   },
