@@ -3,33 +3,50 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Deploy all Vestr contracts in dependency order:
+ * Deploy all Vestr contracts in dependency order.
  *
- *   MockUSDT → MockcUSDT
- *   RoundFactory → Allocations → cEquity → Subscription → Disclosure
+ * Network behaviour:
+ *   hardhat / localhost — deploy MockUSDT + MockcUSDT from scratch.
+ *   sepolia             — use Zama's already-deployed mock USDT as the underlying
+ *                         (free public mint, no deploy needed), then wrap it in our
+ *                         own MockcUSDT so the Subscription interface stays consistent.
  *
- * After deploy, wires cross-contract references:
- *   RoundFactory.setAllocationsContract(allocations)
- *   Allocations.setSubscriptionContract(subscription)
- *
- * Writes deployed addresses to:
- *   - deployed.json  (for scripts/seed.ts and tests)
- *   - .env.local     (for the Next.js frontend)
+ * Zama Sepolia addresses (https://docs.zama.org/protocol/protocol-apps/addresses/testnet/sepolia):
+ *   Underlying mock USDT : 0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0  (1M/call public mint)
+ *   cUSDTMock (their own): 0x4E7B06D78965594eB5EF5414c357ca21E1554491  (not used — interface mismatch)
  */
+
+// Zama's mock USDT on Sepolia — has a public `mint(address, uint256)` with a 1M cap per call.
+const ZAMA_SEPOLIA_MOCK_USDT = "0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0";
+
 async function main() {
   const [deployer] = await ethers.getSigners();
+  const network = await ethers.provider.getNetwork();
+  const chainId = Number(network.chainId);
+  const isSepolia = chainId === 11155111;
+
+  console.log("Network:", network.name, `(chainId ${chainId})`);
   console.log("Deploying with:", deployer.address);
   console.log("Balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)), "ETH\n");
 
-  // ── 1. MockUSDT ────────────────────────────────────────────────────────────
-  console.log("Deploying MockUSDT...");
-  const MockUSDT = await ethers.getContractFactory("MockUSDT");
-  const mockUSDT = await MockUSDT.deploy();
-  await mockUSDT.waitForDeployment();
-  const mockUSDTAddress = await mockUSDT.getAddress();
-  console.log("  MockUSDT:", mockUSDTAddress);
+  // ── 1. MockUSDT (underlying plaintext token) ───────────────────────────────
+  let mockUSDTAddress: string;
+  if (isSepolia) {
+    // Reuse Zama's already-deployed mock USDT — free public mint, no gas wasted.
+    mockUSDTAddress = ZAMA_SEPOLIA_MOCK_USDT;
+    console.log("MockUSDT: using Zama Sepolia mock at", mockUSDTAddress, "(skipping deploy)");
+  } else {
+    console.log("Deploying MockUSDT...");
+    const MockUSDT = await ethers.getContractFactory("MockUSDT");
+    const mockUSDT = await MockUSDT.deploy();
+    await mockUSDT.waitForDeployment();
+    mockUSDTAddress = await mockUSDT.getAddress();
+    console.log("  MockUSDT:", mockUSDTAddress);
+  }
 
-  // ── 2. MockcUSDT ───────────────────────────────────────────────────────────
+  // ── 2. MockcUSDT (our FHE-encrypted wrapper) ───────────────────────────────
+  // We always deploy our own wrapper so Subscription.sol's transferFrom interface
+  // is consistent across networks. It simply wraps whichever underlying is above.
   console.log("Deploying MockcUSDT...");
   const MockcUSDT = await ethers.getContractFactory("MockcUSDT");
   const mockCUSDT = await MockcUSDT.deploy(mockUSDTAddress);
@@ -130,11 +147,12 @@ async function main() {
 
   // ── Write addresses ────────────────────────────────────────────────────────
   const addresses = {
-    network: (await ethers.provider.getNetwork()).name,
-    chainId: Number((await ethers.provider.getNetwork()).chainId),
+    network: network.name,
+    chainId,
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
     MockUSDT: mockUSDTAddress,
+    MockUSDT_note: isSepolia ? "Zama official mock — not deployed by us" : "deployed by us",
     MockcUSDT: cUSDTAddress,
     RoundFactory: roundFactoryAddress,
     Allocations: allocationsAddress,

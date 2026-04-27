@@ -5,49 +5,58 @@ import {FHE, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "../interfaces/IConfidentialERC20.sol";
 
 /**
  * @title  MockcUSDT
- * @notice Confidential USDT — wraps MockUSDT into an FHE-encrypted ERC-20.
+ * @notice ERC-7984-compatible confidential USDT for local development.
  *
- *         Wrap flow (per investor, done in seed script):
- *           1. investor.approve(mockCUSDT, amount)     — plaintext approval
- *           2. mockCUSDT.wrap(amount)                  — locks mUSDT, credits euint64 balance
- *           3. mockCUSDT.approve(subscription, handle, proof) — encrypted allowance
- *           4. subscription.subscribe(roundId)         — encrypted transferFrom
+ *         Wraps MockUSDT (local) or Zama's mock USDT (Sepolia) into FHE-encrypted
+ *         balances. Implements IConfidentialERC20 so Subscription.sol is identical
+ *         across both networks — on Sepolia we simply point at Zama's deployed
+ *         cUSDTMock (0x4E7B06D78965594eB5EF5414c357ca21E1554491) instead.
  *
- *         Swap to canonical cUSDT: set CUSDT_ADDRESS env var and point
- *         Subscription.sol at it — interface is identical, no contract changes.
+ *         Key differences from ERC-20 allowance model:
+ *           - NO encrypted approve. Investors call setOperator(subscriptionAddr, deadline).
+ *           - Operators may move any amount on the holder's behalf until the deadline.
+ *           - This mirrors how Zama's live cUSDTMock works.
+ *
+ *         Wrap flow (seed script / frontend):
+ *           1. investor.approve(mockCUSDT, amount)          — plaintext ERC-20 approval
+ *           2. mockCUSDT.wrap(amount)                       — locks mUSDT, credits euint64 balance
+ *           3. mockCUSDT.setOperator(subscriptionAddr, deadline) — grant operator access
+ *           4. subscription.subscribe(roundId)              — confidentialTransferFrom
  */
-contract MockcUSDT is ZamaEthereumConfig, ReentrancyGuard {
-    IERC20 public immutable underlying; // MockUSDT
+contract MockcUSDT is IConfidentialERC20, ZamaEthereumConfig, ReentrancyGuard {
+    IERC20 public immutable underlying;
 
     mapping(address => euint64) private _balances;
-    mapping(address => mapping(address => euint64)) private _allowances;
+
+    // Operator model: holder → operator → expiry timestamp
+    mapping(address => mapping(address => uint48)) private _operators;
 
     event Wrap(address indexed account, uint256 amount);
     event Unwrap(address indexed account, uint256 amount);
-    event Transfer(address indexed from, address indexed to);
-    event Approval(address indexed owner, address indexed spender);
+    event OperatorSet(address indexed holder, address indexed operator, uint48 until);
 
-    error InsufficientBalance();
     error ZeroAmount();
+    error NotOperator();
 
-    constructor(address mockUSDT_) {
-        underlying = IERC20(mockUSDT_);
+    constructor(address underlying_) {
+        underlying = IERC20(underlying_);
     }
 
-    // ─── Wrap / Unwrap ────────────────────────────────────────────────────────
+    // ── Wrap / Unwrap ─────────────────────────────────────────────────────────
 
     /**
-     * @notice Lock plaintext mUSDT and credit an encrypted balance.
-     *         Caller must have approved this contract for `amount` beforehand.
+     * @notice Lock plaintext USDT and credit an encrypted balance.
+     *         Caller must ERC-20-approve this contract for `amount` beforehand.
      */
     function wrap(uint64 amount) external nonReentrant {
         if (amount == 0) revert ZeroAmount();
         underlying.transferFrom(msg.sender, address(this), uint256(amount));
 
-        euint64 enc = FHE.asEuint64(amount);
+        euint64 enc    = FHE.asEuint64(amount);
         euint64 newBal = FHE.add(_balances[msg.sender], enc);
         _balances[msg.sender] = FHE.allowThis(newBal);
         FHE.allow(newBal, msg.sender);
@@ -56,14 +65,13 @@ contract MockcUSDT is ZamaEthereumConfig, ReentrancyGuard {
     }
 
     /**
-     * @notice Decrypt and withdraw mUSDT back. Amount is plaintext for simplicity (v1).
-     *         In production this would use a gateway decryption request.
+     * @notice Burn encrypted balance and withdraw plaintext USDT.
+     *         Caller supplies the plaintext amount they wish to reclaim.
+     *         (V1 demo: trusts the caller knows their balance via decryption.)
      */
     function unwrap(uint64 amount) external nonReentrant {
         if (amount == 0) revert ZeroAmount();
-        // For v1 / demo: trust the caller knows their balance (they can decrypt it)
-        // Deduct encrypted amount from balance
-        euint64 enc = FHE.asEuint64(amount);
+        euint64 enc    = FHE.asEuint64(amount);
         euint64 newBal = FHE.sub(_balances[msg.sender], enc);
         _balances[msg.sender] = FHE.allowThis(newBal);
         FHE.allow(newBal, msg.sender);
@@ -72,48 +80,40 @@ contract MockcUSDT is ZamaEthereumConfig, ReentrancyGuard {
         emit Unwrap(msg.sender, amount);
     }
 
-    // ─── Encrypted ERC-20 interface ───────────────────────────────────────────
+    // ── IConfidentialERC20 ────────────────────────────────────────────────────
 
-    function balanceOf(address account) external view returns (euint64) {
+    /**
+     * @notice Grant `operator` permission to transfer any amount on the caller's
+     *         behalf until `until` (Unix timestamp). Replaces encrypted approve.
+     */
+    function setOperator(address operator, uint48 until) external override {
+        _operators[msg.sender][operator] = until;
+        emit OperatorSet(msg.sender, operator, until);
+    }
+
+    function isOperator(address holder, address spender) external view override returns (bool) {
+        return _operators[holder][spender] >= uint48(block.timestamp);
+    }
+
+    function confidentialBalanceOf(address account) external view override returns (euint64) {
         return _balances[account];
     }
 
     /**
-     * @notice Set an encrypted allowance for a spender.
-     * @param spender   Address permitted to spend.
-     * @param encAmount Encrypted allowance amount from relayer SDK.
-     * @param inputProof ZKPoK proof.
+     * @notice Encrypted transfer from `from` to `to`.
+     *         Caller must be `from` OR a valid operator for `from`.
+     *         The `amount` handle must be ACL-allowed to msg.sender.
      */
-    function approve(address spender, externalEuint64 encAmount, bytes calldata inputProof) external {
-        euint64 amt = FHE.fromExternal(encAmount, inputProof);
-        _allowances[msg.sender][spender] = FHE.allowThis(amt);
-        FHE.allow(amt, msg.sender);
-        FHE.allow(amt, spender);
-        emit Approval(msg.sender, spender);
-    }
-
-    function allowance(address owner, address spender) external view returns (euint64) {
-        return _allowances[owner][spender];
-    }
-
-    /**
-     * @notice Encrypted transfer: move `amount` from `from` to `to`.
-     *         Caller must be `from` OR have a sufficient encrypted allowance.
-     *         Uses FHE.select to silently transfer 0 if allowance/balance insufficient
-     *         (standard confidential ERC-20 behaviour).
-     */
-    function transferFrom(address from, address to, euint64 amount) external returns (bool) {
+    function confidentialTransferFrom(
+        address from,
+        address to,
+        euint64 amount
+    ) external override returns (euint64 transferred) {
         if (msg.sender != from) {
-            // Consume allowance
-            euint64 currentAllowance = _allowances[from][msg.sender];
-            euint64 newAllowance = FHE.sub(currentAllowance, amount);
-            _allowances[from][msg.sender] = FHE.allowThis(newAllowance);
-            FHE.allow(newAllowance, from);
-            FHE.allow(newAllowance, msg.sender);
+            if (_operators[from][msg.sender] < uint48(block.timestamp)) revert NotOperator();
         }
 
-        euint64 fromBal = _balances[from];
-        euint64 newFromBal = FHE.sub(fromBal, amount);
+        euint64 newFromBal = FHE.sub(_balances[from], amount);
         _balances[from] = FHE.allowThis(newFromBal);
         FHE.allow(newFromBal, from);
 
@@ -121,14 +121,16 @@ contract MockcUSDT is ZamaEthereumConfig, ReentrancyGuard {
         _balances[to] = FHE.allowThis(newToBal);
         FHE.allow(newToBal, to);
 
-        emit Transfer(from, to);
-        return true;
+        return amount;
     }
 
     /**
-     * @notice Transfer from msg.sender to `to`.
+     * @notice Encrypted transfer from msg.sender to `to`.
      */
-    function transfer(address to, euint64 amount) external returns (bool) {
+    function confidentialTransfer(
+        address to,
+        euint64 amount
+    ) external override returns (euint64 transferred) {
         euint64 newFromBal = FHE.sub(_balances[msg.sender], amount);
         _balances[msg.sender] = FHE.allowThis(newFromBal);
         FHE.allow(newFromBal, msg.sender);
@@ -137,7 +139,6 @@ contract MockcUSDT is ZamaEthereumConfig, ReentrancyGuard {
         _balances[to] = FHE.allowThis(newToBal);
         FHE.allow(newToBal, to);
 
-        emit Transfer(msg.sender, to);
-        return true;
+        return amount;
     }
 }
