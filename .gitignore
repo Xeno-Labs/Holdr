@@ -10,3 +10,5 @@ frontend/.next
 frontend/node_modules
 frontend/.env.local
 AGENT_ERRORS.md
+VESTR_IMPLEMENTATION.md
+holder prd.md
