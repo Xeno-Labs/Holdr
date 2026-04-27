@@ -11,6 +11,7 @@ describe("Disclosure (FHE)", function () {
   let founder: HardhatEthersSigner;
   let investor: HardhatEthersSigner;
   let counterparty: HardhatEthersSigner;
+  let fakeSubscription: HardhatEthersSigner;
   let other: HardhatEthersSigner;
 
   let roundId: bigint;
@@ -22,7 +23,7 @@ describe("Disclosure (FHE)", function () {
       this.skip();
     }
 
-    [founder, investor, counterparty, other] = await ethers.getSigners();
+    [founder, investor, counterparty, fakeSubscription, other] = await ethers.getSigners();
 
     const RoundFactory = await ethers.getContractFactory("RoundFactory");
     roundFactory = await RoundFactory.deploy();
@@ -37,7 +38,7 @@ describe("Disclosure (FHE)", function () {
     const disclosureAddress = await disclosure.getAddress();
 
     await (await roundFactory.setAllocationsContract(allocationsAddress)).wait();
-    await (await allocations.setSubscriptionContract(other.address)).wait();
+    await (await allocations.setSubscriptionContract(fakeSubscription.address)).wait();
     await (await allocations.setDisclosureContract(disclosureAddress)).wait();
   });
 

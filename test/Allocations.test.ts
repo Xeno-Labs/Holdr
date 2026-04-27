@@ -26,7 +26,7 @@ describe("Allocations (FHE)", function () {
       this.skip();
     }
 
-    [founder, investor1, investor2, other] = await ethers.getSigners();
+    [founder, investor1, investor2, fakeSubscription, other] = await ethers.getSigners();
 
     // Deploy RoundFactory
     const RoundFactory = await ethers.getContractFactory("RoundFactory");
@@ -42,8 +42,8 @@ describe("Allocations (FHE)", function () {
     // Wire contracts
     await (await roundFactory.setAllocationsContract(allocationsAddress)).wait();
 
-    // Simulate Subscription wiring (use other as subscription address for tests)
-    await (await allocations.setSubscriptionContract(other.address)).wait();
+    // Simulate Subscription wiring (use fakeSubscription as stand-in)
+    await (await allocations.setSubscriptionContract(fakeSubscription.address)).wait();
   });
 
   beforeEach(async function () {
@@ -239,7 +239,7 @@ describe("Allocations (FHE)", function () {
     });
 
     it("marks investor as subscribed (only subscription contract)", async function () {
-      await (await allocations.connect(other).markSubscribed(roundId, investor1.address)).wait();
+      await (await allocations.connect(fakeSubscription).markSubscribed(roundId, investor1.address)).wait();
       expect(await allocations.isSubscribed(roundId, investor1.address)).to.be.true;
     });
 
@@ -271,9 +271,9 @@ describe("Allocations (FHE)", function () {
       // Open round
       await (await roundFactory.connect(founder).openRound(roundId)).wait();
 
-      // Mark all subscribed (simulate subscription)
-      await (await allocations.connect(other).markSubscribed(roundId, investor1.address)).wait();
-      await (await allocations.connect(other).markSubscribed(roundId, investor2.address)).wait();
+      // Mark all subscribed (simulate subscription contract)
+      await (await allocations.connect(fakeSubscription).markSubscribed(roundId, investor1.address)).wait();
+      await (await allocations.connect(fakeSubscription).markSubscribed(roundId, investor2.address)).wait();
     });
 
     it("requestClose emits CloseRequested with handle", async function () {
