@@ -53,7 +53,7 @@ export function useRoundCount() {
 /** Fetch all rounds (up to `count`) */
 export function useAllRounds(count: bigint | undefined) {
   const ids = count !== undefined
-    ? Array.from({ length: Number(count) }, (_, i) => BigInt(i))
+    ? Array.from({ length: Number(count) }, (_, i) => BigInt(i + 1))
     : [];
 
   const contracts = ids.map((id) => ({

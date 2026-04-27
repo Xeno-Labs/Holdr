@@ -140,6 +140,25 @@ export const ALLOCATIONS_ABI = [
     outputs: [],
   },
   {
+    name: "pendingCloseHandle",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "roundId", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes32" }],
+  },
+  {
+    name: "submitCloseResult",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "roundId",              type: "uint256"   },
+      { name: "handlesList",          type: "bytes32[]" },
+      { name: "abiEncodedCleartexts", type: "bytes"     },
+      { name: "decryptionProof",      type: "bytes"     },
+    ],
+    outputs: [],
+  },
+  {
     name: "submitCloseResult",
     type: "function",
     stateMutability: "nonpayable",
@@ -186,20 +205,69 @@ export const SUBSCRIPTION_ABI = [
   },
 ] as const;
 
+// Mock USDT underlying — public mint on Sepolia, ERC-20 on local
+export const MOCK_USDT_ABI = [
+  {
+    name: "mint",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to",     type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "approve",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount",  type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "allowance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner",   type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
 export const MOCKCUSDT_ABI = [
-  // ── Local-only: wrap/unwrap plaintext USDT ──────────────────────────────
+  // ── Wrap / unwrap plaintext USDT ─────────────────────────────────────────
+  // Zama's cUSDTMock (Sepolia) and our MockcUSDT (local) both use uint256
   {
     name: "wrap",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [{ name: "amount", type: "uint64" }],
+    inputs: [
+      { name: "to",     type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
     outputs: [],
   },
   {
     name: "unwrap",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [{ name: "amount", type: "uint64" }],
+    inputs: [
+      { name: "from",   type: "address" },
+      { name: "to",     type: "address" },
+      { name: "amount", type: "bytes32" },
+    ],
     outputs: [],
   },
   // ── ERC-7984 / IConfidentialERC20 ──────────────────────────────────────

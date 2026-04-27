@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
+  // Silence the "multiple lockfiles" workspace root warning
+  outputFileTracingRoot: path.join(__dirname, '../'),
+
   serverExternalPackages: ['@zama-fhe/relayer-sdk'],
 
   webpack(config, { isServer }) {
@@ -30,7 +34,12 @@ const nextConfig: NextConfig = {
       const webpack = require('webpack');
       config.plugins = [
         ...(config.plugins ?? []),
-        new webpack.ProvidePlugin({ Buffer: ['buffer', 'Buffer'] }),
+        new webpack.ProvidePlugin({
+          Buffer: ['buffer', 'Buffer'],
+          // Some SDK transitive deps reference the Node.js `global` object in browser builds
+          global: require.resolve('./lib/global-shim.js'),
+          process: require.resolve('process/browser'),
+        }),
       ];
     }
 
