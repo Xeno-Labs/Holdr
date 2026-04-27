@@ -40,6 +40,9 @@ function fmt(amount: bigint): string {
 }
 
 async function main() {
+  // Initialize the fhevm plugin API for script (CLI) context
+  await fhevm.initializeCLIApi();
+
   if (!fhevm.isMock) {
     console.log("⚠️  interact.ts runs on mock network only. Use Sepolia for real FHE.");
     process.exit(0);
@@ -149,9 +152,10 @@ async function main() {
   console.log(`   Aggregate handle: ${encAggregate}`);
 
   // ── 8. Off-chain: KMS decrypts aggregate ───────────────────────────────────
+  // publicDecrypt returns { clearValues: Record<handle, bigint>, abiEncodedClearValues, decryptionProof }
   console.log("\n【8】 KMS (mock) decrypting aggregate...");
   const decryptResult = await fhevm.publicDecrypt([encAggregate]);
-  const totalRaised = decryptResult.decryptedResults[0] as bigint;
+  const totalRaised = decryptResult.clearValues[encAggregate as `0x${string}`] as bigint;
   console.log(`   Decrypted aggregate: ${fmt(totalRaised)}`);
 
   // ── 9. Submit KMS proof on-chain ───────────────────────────────────────────
@@ -159,8 +163,8 @@ async function main() {
   await (
     await allocations.submitCloseResult(
       roundId,
-      decryptResult.handles,
-      decryptResult.abiEncodedDecryptedResults,
+      [encAggregate],
+      decryptResult.abiEncodedClearValues,
       decryptResult.decryptionProof
     )
   ).wait();

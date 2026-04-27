@@ -89,11 +89,18 @@ contract Allocations is ZamaEthereumConfig {
 
         euint64 amt = FHE.fromExternal(encAmount, inputProof);
 
-        // Founder and investor can decrypt their row; this contract needs access for sumAllocations;
-        // disclosureContract needs access so it can re-grant to counterparties via grantViewTo
+        // Grant ACL access to all contracts that need to operate on this handle:
+        // - founder:             decrypt any row
+        // - investor:            decrypt their own row
+        // - this contract:       sumAllocations (FHE.add loop)
+        // - subscriptionContract: FHE.allowTransient(alloc, cUSDT) in subscribe()
+        // - disclosureContract:  FHE.allow(handle, counterparty) in grantView()
         FHE.allow(amt, r.founder);
         FHE.allow(amt, investor);
         FHE.allowThis(amt);
+        if (subscriptionContract != address(0)) {
+            FHE.allow(amt, subscriptionContract);
+        }
         if (disclosureContract != address(0)) {
             FHE.allow(amt, disclosureContract);
         }

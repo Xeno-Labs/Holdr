@@ -32,8 +32,7 @@ async function main() {
   // ── 2. MockcUSDT ───────────────────────────────────────────────────────────
   console.log("Deploying MockcUSDT...");
   const MockcUSDT = await ethers.getContractFactory("MockcUSDT");
-  const MAX_DECRYPTION_DELAY = 60 * 60 * 24; // 1 day in seconds
-  const mockCUSDT = await MockcUSDT.deploy(mockUSDTAddress, MAX_DECRYPTION_DELAY);
+  const mockCUSDT = await MockcUSDT.deploy(mockUSDTAddress);
   await mockCUSDT.waitForDeployment();
   const cUSDTAddress = await mockCUSDT.getAddress();
   console.log("  MockcUSDT:", cUSDTAddress);

@@ -10,7 +10,8 @@ describe("Allocations (FHE)", function () {
   let founder: HardhatEthersSigner;
   let investor1: HardhatEthersSigner;
   let investor2: HardhatEthersSigner;
-  let other: HardhatEthersSigner;
+  let fakeSubscription: HardhatEthersSigner; // stands in for subscription contract
+  let other: HardhatEthersSigner;            // truly unauthorized wallet
 
   let roundId: bigint;
   let allocationsAddress: string;
