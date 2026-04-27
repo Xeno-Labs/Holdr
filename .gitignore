@@ -1,3 +1,11 @@
-holder prd.md
-VESTR_IMPLEMENTATION.md
 node_modules
+artifacts
+cache
+typechain-types
+dist
+deployed.json
+.env
+.env.local
+frontend/.next
+frontend/node_modules
+frontend/.env.local
