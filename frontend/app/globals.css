@@ -41,6 +41,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Landing (reference: landing.html) — dot grid + radial fade */
+.landing-bg-dots {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.landing-mask-radial {
+  mask-image: radial-gradient(ellipse at top center, black, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at top center, black, transparent 70%);
+}
+
 /* Dot grid hero background */
 .dot-grid {
   background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
