@@ -14,13 +14,10 @@ export default function Home() {
           className={`flex flex-col items-center justify-center px-6 pb-20 pt-4 text-center md:pb-28 md:pt-8 ${instrument}`}
         >
           <div className="flex w-full max-w-4xl flex-col items-center mt-8">
-            <h1 className="mb-6 bg-gradient-to-b from-black via-zinc-900 to-zinc-500 bg-clip-text text-5xl font-normal leading-[1.1] tracking-tight text-transparent sm:text-6xl md:text-7xl">
-              The cap table.
-              <br className="hidden sm:block" />
-              On-chain.
-              <br className="sm:hidden" />
-              <span className="from-zinc-800 to-zinc-400 bg-gradient-to-b bg-clip-text text-transparent">
-                No one gets doxxed.
+            <h1 className="mb-6 bg-linear-to-b from-black via-zinc-900 to-zinc-500 bg-clip-text text-5xl font-normal leading-[1.1] tracking-tight text-transparent sm:text-6xl md:text-7xl">
+              <span className="block">Encrypted capital markets.</span>
+              <span className="block bg-linear-to-b from-zinc-700 to-zinc-400 bg-clip-text text-transparent">
+                On-chain.
               </span>
             </h1>
 
@@ -70,24 +67,6 @@ export default function Home() {
                   strokeWidth={1.5}
                 />
               </Link>
-            </div>
-
-            <div
-              className={`mt-16 grid w-full max-w-3xl grid-cols-2 gap-6 border-t border-zinc-200 pt-10 md:grid-cols-4 ${inter}`}
-            >
-              {[
-                { value: 'euint64', label: 'Allocation type' },
-                { value: 'ERC-7984', label: 'Token standard' },
-                { value: '3 views', label: '1 ciphertext' },
-                { value: 'Sepolia', label: 'Live testnet' },
-              ].map(({ value, label }) => (
-                <div key={value} className="text-left">
-                  <div className="font-mono text-sm font-semibold text-zinc-900">
-                    {value}
-                  </div>
-                  <div className="mt-0.5 text-xs text-zinc-500">{label}</div>
-                </div>
-              ))}
             </div>
           </div>
         </section>
@@ -251,7 +230,7 @@ export default function Home() {
                     ].map(({ label, desc }) => (
                       <div
                         key={label}
-                        className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                        className="rounded-xl border border-white/10 bg-white/3 p-3"
                       >
                         <code className="font-mono text-xs text-[#c4b5fd]">
                           {label}
