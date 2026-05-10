@@ -27,6 +27,9 @@ contract RoundFactory {
     uint256 public roundCount;
     mapping(uint256 => Round) private _rounds;
 
+    /// @notice Optional IPFS CID (v0 or v1) pointing at founder company JSON metadata.
+    mapping(address => string) private _founderProfileCid;
+
     // Trusted Allocations contract — set once at construction
     address public allocationsContract;
 
@@ -34,6 +37,7 @@ contract RoundFactory {
     event RoundOpened(uint256 indexed roundId);
     event RoundClosed(uint256 indexed roundId, uint256 totalRaised);
     event RoundCancelled(uint256 indexed roundId);
+    event FounderProfileUpdated(address indexed founder, string ipfsCid);
 
     error NotFounder();
     error InvalidStatus(Status current, Status required);
@@ -131,5 +135,21 @@ contract RoundFactory {
 
     function getFounder(uint256 roundId) external view returns (address) {
         return _rounds[roundId].founder;
+    }
+
+    /**
+     * @notice Set or update the founder's public company profile pointer (IPFS CID).
+     *         JSON schema is defined off-chain (see frontend `FounderProfile` type).
+     */
+    function setFounderProfileCid(string calldata ipfsCid) external {
+        _founderProfileCid[msg.sender] = ipfsCid;
+        emit FounderProfileUpdated(msg.sender, ipfsCid);
+    }
+
+    /**
+     * @notice Returns the IPFS CID for a founder's pinned profile, or empty string.
+     */
+    function founderProfileCid(address founder) external view returns (string memory) {
+        return _founderProfileCid[founder];
     }
 }

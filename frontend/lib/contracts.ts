@@ -2,13 +2,14 @@
 // For Sepolia, set these in .env.local after deployment
 
 export const ADDRESSES = {
-  MockUSDT:     process.env.NEXT_PUBLIC_MOCK_USDT_ADDRESS    as `0x${string}`,
-  MockcUSDT:    process.env.NEXT_PUBLIC_CUSDT_ADDRESS        as `0x${string}`,
-  RoundFactory: process.env.NEXT_PUBLIC_ROUND_FACTORY_ADDRESS as `0x${string}`,
-  Allocations:  process.env.NEXT_PUBLIC_ALLOCATIONS_ADDRESS  as `0x${string}`,
-  Subscription: process.env.NEXT_PUBLIC_SUBSCRIPTION_ADDRESS as `0x${string}`,
-  cEquity:      process.env.NEXT_PUBLIC_CEQUITY_ADDRESS      as `0x${string}`,
-  Disclosure:   process.env.NEXT_PUBLIC_DISCLOSURE_ADDRESS   as `0x${string}`,
+  MockUSDT:            process.env.NEXT_PUBLIC_MOCK_USDT_ADDRESS              as `0x${string}`,
+  MockcUSDT:           process.env.NEXT_PUBLIC_CUSDT_ADDRESS                  as `0x${string}`,
+  RoundFactory:        process.env.NEXT_PUBLIC_ROUND_FACTORY_ADDRESS          as `0x${string}`,
+  Allocations:         process.env.NEXT_PUBLIC_ALLOCATIONS_ADDRESS            as `0x${string}`,
+  Subscription:        process.env.NEXT_PUBLIC_SUBSCRIPTION_ADDRESS           as `0x${string}`,
+  cEquity:             process.env.NEXT_PUBLIC_CEQUITY_ADDRESS                as `0x${string}`,
+  Disclosure:          process.env.NEXT_PUBLIC_DISCLOSURE_ADDRESS             as `0x${string}`,
+  InvestorCredential:  process.env.NEXT_PUBLIC_INVESTOR_CREDENTIAL_ADDRESS    as `0x${string}`,
 } as const;
 
 // ─── ABIs (trimmed to only the functions the frontend calls) ─────────────────
@@ -65,6 +66,20 @@ export const ROUND_FACTORY_ABI = [
     stateMutability: "view",
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "setFounderProfileCid",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "ipfsCid", type: "string" }],
+    outputs: [],
+  },
+  {
+    name: "founderProfileCid",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "founder", type: "address" }],
+    outputs: [{ name: "", type: "string" }],
   },
   {
     name: "RoundCreated",
@@ -361,6 +376,62 @@ export const DISCLOSURE_ABI = [
       { name: "roundId",     type: "uint256", indexed: true },
       { name: "investor",    type: "address", indexed: true },
       { name: "counterparty", type: "address", indexed: true },
+    ],
+  },
+] as const;
+
+export const INVESTOR_CREDENTIAL_ABI = [
+  {
+    name: "issue",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "roundId",  type: "uint256" },
+      { name: "investor", type: "address" },
+    ],
+    outputs: [{ name: "tokenId", type: "uint256" }],
+  },
+  {
+    name: "hasCredential",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "roundId",  type: "uint256" },
+      { name: "investor", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "credentialOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "roundId",  type: "uint256" },
+      { name: "investor", type: "address" },
+    ],
+    outputs: [{ name: "tokenId", type: "uint256" }],
+  },
+  {
+    name: "tokenRound",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "roundId", type: "uint256" }],
+  },
+  {
+    name: "totalIssued",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "CredentialIssued",
+    type: "event",
+    inputs: [
+      { name: "roundId",  type: "uint256", indexed: true },
+      { name: "investor", type: "address", indexed: true },
+      { name: "tokenId",  type: "uint256", indexed: true },
     ],
   },
 ] as const;

@@ -14,7 +14,8 @@ import {
 import { encryptUint64, publicDecrypt } from "@/lib/fhe";
 import type { Round } from "@/lib/hooks/useRound";
 import { useTxToast } from "@/components/ui/Toast";
-import { UserPlus, Lock, ChevronDown, ChevronUp } from "lucide-react";
+import { UserPlus, Lock, ChevronDown, ChevronUp, BadgeCheck } from "lucide-react";
+import { useRoundCredentials } from "@/lib/hooks/useInvestorCredential";
 
 interface Props {
   round: Round;
@@ -27,6 +28,7 @@ export function FounderView({ round, investors, refetch }: Props) {
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const { write } = useTxToast();
+  const { credentialMap } = useRoundCredentials(round.id, investors);
 
   // Add investor form
   const [showAddForm, setShowAddForm] = useState(false);
@@ -227,7 +229,7 @@ export function FounderView({ round, investors, refetch }: Props) {
               <button
                 onClick={handleAddInvestor}
                 disabled={isAdding || !addrValid || !invAmount}
-                className="text-sm bg-foreground text-background rounded-xl px-4 py-1.5 font-medium hover:opacity-80 transition-opacity disabled:opacity-40"
+                className="text-sm bg-[#8624FF] text-white rounded-xl px-4 py-1.5 font-medium shadow-[0_0_16px_rgba(134,36,255,0.25)] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:shadow-none"
               >
                 {isAdding ? "Encrypting…" : "Add"}
               </button>
@@ -250,16 +252,31 @@ export function FounderView({ round, investors, refetch }: Props) {
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {investors.map((addr) => (
-              <li key={addr} className="px-4 py-3 flex items-center justify-between">
-                <span className="font-mono text-xs text-foreground">
-                  {addr.slice(0, 10)}…{addr.slice(-6)}
-                </span>
-                <span className="badge-locked">
-                  <Lock size={10} /> encrypted
-                </span>
-              </li>
-            ))}
+            {investors.map((addr) => {
+              const tokenId = credentialMap[addr];
+              const hasNft = tokenId !== undefined && tokenId > 0n;
+              return (
+                <li key={addr} className="px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs text-foreground truncate">
+                      {addr.slice(0, 10)}…{addr.slice(-6)}
+                    </span>
+                    {hasNft && (
+                      <span
+                        title={`Soulbound credential #${tokenId.toString()}`}
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-[#8624FF] border border-[#8624FF]/25 bg-[#8624FF]/8 rounded-full px-2 py-0.5 shrink-0"
+                      >
+                        <BadgeCheck size={10} />
+                        #{tokenId.toString()}
+                      </span>
+                    )}
+                  </div>
+                  <span className="badge-locked shrink-0">
+                    <Lock size={10} /> encrypted
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

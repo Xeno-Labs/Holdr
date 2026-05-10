@@ -135,6 +135,14 @@ async function main() {
   const disclosureAddress = await disclosure.getAddress();
   console.log("  Disclosure:", disclosureAddress);
 
+  // ── 7. InvestorCredential ──────────────────────────────────────────────────
+  console.log("Deploying InvestorCredential...");
+  const InvestorCredential = await ethers.getContractFactory("InvestorCredential");
+  const investorCredential = await InvestorCredential.deploy(allocationsAddress);
+  await investorCredential.waitForDeployment();
+  const investorCredentialAddress = await investorCredential.getAddress();
+  console.log("  InvestorCredential:", investorCredentialAddress);
+
   // ── Wire cross-contract references ─────────────────────────────────────────
   console.log("\nWiring contracts...");
 
@@ -149,6 +157,10 @@ async function main() {
   tx = await allocations.setDisclosureContract(disclosureAddress);
   await tx.wait();
   console.log("  Allocations.setDisclosureContract ✓");
+
+  tx = await allocations.setCredentialContract(investorCredentialAddress);
+  await tx.wait();
+  console.log("  Allocations.setCredentialContract ✓");
 
   // ── Write addresses ────────────────────────────────────────────────────────
   const addresses = {
@@ -166,6 +178,7 @@ async function main() {
     Subscription: subscriptionAddress,
     cEquity: cEquityAddress,
     Disclosure: disclosureAddress,
+    InvestorCredential: investorCredentialAddress,
   };
 
   const deployedPath = path.join(__dirname, "../deployed.json");
@@ -182,6 +195,7 @@ NEXT_PUBLIC_ALLOCATIONS_ADDRESS=${allocationsAddress}
 NEXT_PUBLIC_SUBSCRIPTION_ADDRESS=${subscriptionAddress}
 NEXT_PUBLIC_CEQUITY_ADDRESS=${cEquityAddress}
 NEXT_PUBLIC_DISCLOSURE_ADDRESS=${disclosureAddress}
+NEXT_PUBLIC_INVESTOR_CREDENTIAL_ADDRESS=${investorCredentialAddress}
 `;
   const frontendDir = path.join(__dirname, "../frontend");
   if (fs.existsSync(frontendDir)) {

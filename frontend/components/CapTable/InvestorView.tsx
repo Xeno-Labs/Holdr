@@ -208,7 +208,7 @@ export function InvestorView({ round, decryptedAmount, isDecrypting, onDecrypt }
       </div>
 
       {/* Fund cUSDT — needed before subscribing */}
-      {isOpen && !isSubscribedFinal && decryptedAmount !== null && fundStep !== "done" && (
+      {!isSubscribedFinal && decryptedAmount !== null && fundStep !== "done" && (
         <div className="border border-border rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Coins size={14} className="text-muted" />

@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {FHE, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import "./RoundFactory.sol";
+import "./InvestorCredential.sol";
 
 /**
  * @title  Allocations
@@ -36,6 +37,7 @@ contract Allocations is ZamaEthereumConfig {
 
     address public subscriptionContract;
     address public disclosureContract;
+    InvestorCredential public credentialContract;
 
     event InvestorAdded(uint256 indexed roundId, address indexed investor);
     event CloseRequested(uint256 indexed roundId, bytes32 encAggregateHandle);
@@ -49,6 +51,7 @@ contract Allocations is ZamaEthereumConfig {
     error OnlySubscription();
     error SubscriptionAlreadySet();
     error DisclosureAlreadySet();
+    error CredentialAlreadySet();
     error NoInvestors();
     error CloseNotRequested();
     error CloseConditionsNotMet();
@@ -65,6 +68,11 @@ contract Allocations is ZamaEthereumConfig {
     function setDisclosureContract(address _disclosure) external {
         if (disclosureContract != address(0)) revert DisclosureAlreadySet();
         disclosureContract = _disclosure;
+    }
+
+    function setCredentialContract(address _credential) external {
+        if (address(credentialContract) != address(0)) revert CredentialAlreadySet();
+        credentialContract = InvestorCredential(_credential);
     }
 
     // ─── Founder ──────────────────────────────────────────────────────────────
@@ -107,6 +115,11 @@ contract Allocations is ZamaEthereumConfig {
 
         _allocations[roundId][investor] = Allocation({ encAmount: amt, subscribed: false, exists: true });
         _investors[roundId].push(investor);
+
+        // Issue soulbound participation credential (no-op if credential contract not yet set)
+        if (address(credentialContract) != address(0)) {
+            credentialContract.issue(roundId, investor);
+        }
 
         emit InvestorAdded(roundId, investor);
     }

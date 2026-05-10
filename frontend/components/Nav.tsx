@@ -11,13 +11,14 @@ export function Nav() {
   const links = [
     { href: "/rounds", label: "Rounds" },
     { href: "/founder/new", label: "Create" },
+    { href: "/onboarding", label: "Company" },
     { href: "/portfolio", label: "Portfolio" },
   ];
 
   if (isHome) {
     return (
       <header className="relative z-50 flex w-full justify-center bg-transparent px-6 pb-6 pt-6">
-        <nav className="flex w-full max-w-7xl items-center justify-between">
+        <nav className="relative flex w-full max-w-7xl items-center justify-between">
           <Link
             href="/"
             className="cursor-pointer text-xl font-medium tracking-tighter text-zinc-900"
@@ -25,7 +26,7 @@ export function Nav() {
             holdr
           </Link>
 
-          <div className="hidden items-center gap-8 text-sm font-normal text-zinc-600 md:flex">
+          <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-8 text-sm font-normal text-zinc-600 md:flex">
             {links.map(({ href, label }) => (
               <Link
                 key={href}
@@ -37,7 +38,7 @@ export function Nav() {
             ))}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-4">
             <ConnectButton variant="minimal" />
           </div>
         </nav>
@@ -46,7 +47,7 @@ export function Nav() {
   }
 
   return (
-    <nav className="flex h-[60px] items-center gap-8 border-b border-border px-6">
+    <nav className="relative flex h-[60px] items-center border-b border-border px-6">
       <Link
         href="/"
         className="shrink-0 font-mono text-sm font-semibold tracking-tight text-foreground"
@@ -54,7 +55,7 @@ export function Nav() {
         holdr
       </Link>
 
-      <div className="hidden flex-1 items-center gap-6 md:flex">
+      <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-6 md:flex">
         {[{ href: "/", label: "Home" }, ...links].map(({ href, label }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -74,7 +75,7 @@ export function Nav() {
         })}
       </div>
 
-      <div className="ml-auto">
+      <div className="ml-auto shrink-0">
         <ConnectButton />
       </div>
     </nav>

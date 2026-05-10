@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { parseEventLogs, isAddress } from 'viem';
@@ -28,6 +28,7 @@ import {
   ToggleRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { loadFounderProfile, isOnboardingSkipped } from '@/lib/founderProfile';
 
 type Step = 'details' | 'terms' | 'investors' | 'review' | 'done';
 const STEPS: Step[] = ['details', 'terms', 'investors', 'review'];
@@ -184,6 +185,19 @@ export default function NewRoundPage() {
 
   // done
   const [createdId, setCreatedId] = useState<bigint | null>(null);
+  const [onboardGateOpen, setOnboardGateOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setOnboardGateOpen(true);
+      return;
+    }
+    if (isOnboardingSkipped(address) || loadFounderProfile(address)) {
+      setOnboardGateOpen(true);
+      return;
+    }
+    router.replace(`/onboarding?next=${encodeURIComponent('/founder/new')}`);
+  }, [isConnected, address, router]);
 
   const validInvestors = investors.filter(
     (i) => isAddress(i.address) && Number(i.amount) > 0,
@@ -281,6 +295,14 @@ export default function NewRoundPage() {
     );
   }
 
+  if (isConnected && address && !onboardGateOpen) {
+    return (
+      <div className="flex min-h-[calc(100vh-60px)] items-center justify-center bg-white">
+        <div className="size-8 animate-spin rounded-full border-2 border-[#8624FF] border-t-transparent" />
+      </div>
+    );
+  }
+
   // ── done ──────────────────────────────────────────────────────────────────
   if (step === 'done' && createdId !== null) {
     return (
@@ -357,20 +379,21 @@ export default function NewRoundPage() {
 
   // ── main ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-[calc(100vh-60px)] flex bg-white">
-      {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 border-r border-zinc-100 bg-zinc-50/60 px-6 py-10 shrink-0">
+    <div className="min-h-[calc(100vh-60px)] bg-zinc-50/40">
+      <div className="mx-auto flex min-h-[calc(100vh-60px)] w-full max-w-5xl bg-white md:bg-transparent">
+        {/* Sidebar */}
+        <aside className="hidden md:flex md:w-52 lg:w-56 shrink-0 flex-col border-r border-zinc-100 bg-white px-3 py-6 lg:px-4 lg:py-7">
         <Link
           href="/rounds"
-          className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 mb-10 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 mb-5 transition-colors"
         >
           <ArrowLeft size={12} /> Back to rounds
         </Link>
-        <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-5">
+        <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-3">
           New round
         </p>
 
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {STEPS.map((s, i) => {
             const done = i < currentIndex;
             const current = i === currentIndex;
@@ -380,16 +403,16 @@ export default function NewRoundPage() {
                 key={s}
                 onClick={() => (done ? setStep(s) : undefined)}
                 disabled={!done && !current}
-                className={`w-full text-left flex items-start gap-3 px-3 py-3 rounded-xl transition-colors ${
+                className={`w-full text-left flex items-start gap-2.5 px-2.5 py-2 rounded-lg transition-colors ${
                   current
-                    ? 'bg-white border border-zinc-200 shadow-sm'
+                    ? 'bg-zinc-50 border border-zinc-200 shadow-sm'
                     : done
-                    ? 'hover:bg-white/80 cursor-pointer'
+                    ? 'hover:bg-zinc-50/80 cursor-pointer'
                     : 'cursor-default opacity-50'
                 }`}
               >
                 <div
-                  className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-mono shrink-0 transition-colors ${
+                  className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono shrink-0 transition-colors ${
                     done
                       ? 'bg-[#8624FF] text-white'
                       : current
@@ -397,45 +420,45 @@ export default function NewRoundPage() {
                       : 'bg-zinc-200 text-zinc-400'
                   }`}
                 >
-                  {done ? <Check size={10} /> : meta.n}
+                  {done ? <Check size={9} /> : meta.n}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p
-                    className={`text-sm font-medium ${
+                    className={`text-[13px] font-medium leading-tight ${
                       current || done ? 'text-zinc-900' : 'text-zinc-400'
                     }`}
                   >
                     {meta.title}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-0.5">{meta.sub}</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{meta.sub}</p>
                 </div>
               </button>
             );
           })}
         </nav>
 
-        <div className="mt-auto pt-8 border-t border-zinc-100">
-          <div className="rounded-xl border border-[#8624FF]/20 bg-[#8624FF]/5 p-3.5 space-y-1.5">
+        <div className="mt-auto pt-4 border-t border-zinc-100">
+          <div className="rounded-lg border border-[#8624FF]/20 bg-[#8624FF]/5 p-3 space-y-1">
             <div className="flex items-center gap-2">
-              <ShieldCheck size={13} className="text-[#8624FF] shrink-0" />
-              <span className="text-xs font-medium text-[#6b21c8]">
+              <ShieldCheck size={12} className="text-[#8624FF] shrink-0" />
+              <span className="text-[11px] font-medium text-[#6b21c8]">
                 FHE-encrypted
               </span>
             </div>
-            <p className="text-[11px] leading-relaxed text-[#7c3aed]/70">
+            <p className="text-[10px] leading-relaxed text-[#7c3aed]/80">
               Allocations are stored as{' '}
               <code className="font-mono">euint64</code> ciphertexts. Only
               wallets you grant access can decrypt their own row.
             </p>
           </div>
         </div>
-      </aside>
+        </aside>
 
-      {/* Main */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-xl mx-auto px-6 md:px-10 py-10 animate-fade-up">
+        {/* Main */}
+        <div className="flex-1 min-w-0 overflow-y-auto bg-white border-zinc-100 md:border-l-0 md:shadow-sm md:rounded-none">
+          <div className="w-full max-w-xl px-4 py-5 sm:px-6 sm:py-6 md:pl-8 md:pr-6 animate-fade-up">
           {/* Mobile progress */}
-          <div className="flex items-center gap-1.5 mb-8 md:hidden">
+          <div className="flex items-center gap-1.5 mb-5 md:hidden">
             {STEPS.map((s, i) => (
               <div
                 key={s}
@@ -452,7 +475,7 @@ export default function NewRoundPage() {
 
           {/* ── Step 1: Details ──────────────────────────────────────────── */}
           {step === 'details' && (
-            <div className="space-y-8">
+            <div className="space-y-5">
               <div>
                 <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-1">
                   Step 1 of 4
@@ -534,7 +557,7 @@ export default function NewRoundPage() {
 
           {/* ── Step 2: Terms & Docs ─────────────────────────────────────── */}
           {step === 'terms' && (
-            <div className="space-y-8">
+            <div className="space-y-5">
               <div>
                 <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-1">
                   Step 2 of 4
@@ -750,7 +773,7 @@ export default function NewRoundPage() {
 
           {/* ── Step 3: Investors ────────────────────────────────────────── */}
           {step === 'investors' && (
-            <div className="space-y-8">
+            <div className="space-y-5">
               <div>
                 <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-1">
                   Step 3 of 4
@@ -859,7 +882,7 @@ export default function NewRoundPage() {
 
           {/* ── Step 4: Review ───────────────────────────────────────────── */}
           {step === 'review' && (
-            <div className="space-y-8">
+            <div className="space-y-5">
               <div>
                 <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-1">
                   Step 4 of 4
@@ -1008,6 +1031,7 @@ export default function NewRoundPage() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

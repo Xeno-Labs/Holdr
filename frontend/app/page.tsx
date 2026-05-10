@@ -11,7 +11,7 @@ export default function Home() {
       <div className="relative flex flex-1 flex-col">
         {/* ─── Hero ─── */}
         <section
-          className={`flex flex-col items-center justify-center px-6 pb-20 pt-4 text-center md:pb-28 md:pt-8 ${instrument}`}
+          className={`flex flex-col items-center justify-center px-6 pb-16 pt-4 text-center md:pb-20 md:pt-8 ${instrument}`}
         >
           <div className="flex w-full max-w-4xl flex-col items-center mt-8">
             <h1 className="mb-6 bg-linear-to-b from-black via-zinc-900 to-zinc-500 bg-clip-text text-5xl font-normal leading-[1.1] tracking-tight text-transparent sm:text-6xl md:text-7xl">
@@ -72,7 +72,7 @@ export default function Home() {
         </section>
 
         {/* ─── Demo ─── */}
-        <section className="border-t border-zinc-200 bg-white px-6 py-20 md:px-12">
+        <section className="border-t border-zinc-200 bg-white px-6 pt-10 pb-20 md:px-12">
           <div className="mx-auto max-w-7xl">
             <div className="mb-10">
               <p
