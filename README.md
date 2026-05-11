@@ -1,31 +1,14 @@
 # Holdr
 
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity&logoColor=white)](https://soliditylang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![Zama FHEVM](https://img.shields.io/badge/Zama-FHEVM-4B32C3)](https://github.com/zama-ai/fhevm)
-[![Chain](https://img.shields.io/badge/Testnet-Sepolia-3C3C3D?logo=ethereum&logoColor=white)](https://sepolia.etherscan.io/)
-[![License](https://img.shields.io/badge/License-ISC-informational)](./package.json)
-[![GitHub](https://img.shields.io/badge/GitHub-Xeno--Labs%2FHoldr-181717?logo=github)](https://github.com/Xeno-Labs/Holdr)
-
 ## Encrypted capital markets for private companies
 
-Holdr is a confidential fundraising and cap-table protocol for private companies. It brings SAFE-style rounds, investor allocations, subscription settlement, and ownership records on-chain without exposing the sensitive numbers that make private markets private.
-
-The core product idea is simple:
-
-**One round. One URL. One source of truth. Three different views.**
-
-- **Founders** see the full cap table.
-- **Investors** see only their own allocation and position.
-- **The public** sees round metadata and aggregate outcomes, never individual check sizes.
-
-Holdr is built on **Zama FHEVM**, using fully homomorphic encryption so smart contracts can compute over encrypted allocations instead of forcing private company data into the open.
+**Holdr** is confidential fundraising and cap-table infrastructure on Ethereum: SAFE-style rounds, encrypted allocations, cUSDT subscriptions, and confidential equity—without publishing every investor’s check size. **Same round URL, three views:** founders see the full table, investors see only their row, everyone else sees metadata and aggregates. Powered by **Zama FHEVM** (fully homomorphic encryption).
 
 ## Table of contents
 
 - [Encrypted capital markets for private companies](#encrypted-capital-markets-for-private-companies)
-  - [The problem](#the-problem)
-  - [Why this needs FHE](#why-this-needs-fhe)
+- [The problem](#the-problem)
+- [Why this needs FHE](#why-this-needs-fhe)
 - [What Holdr does](#what-holdr-does)
 - [The signature demo](#the-signature-demo)
 - [Why it is strong](#why-it-is-strong)
@@ -42,6 +25,13 @@ Holdr is built on **Zama FHEVM**, using fully homomorphic encryption so smart co
 - [Documentation](#documentation)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
+
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity&logoColor=white)](https://soliditylang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Zama FHEVM](https://img.shields.io/badge/Zama-FHEVM-4B32C3)](https://github.com/zama-ai/fhevm)
+[![Chain](https://img.shields.io/badge/Testnet-Sepolia-3C3C3D?logo=ethereum&logoColor=white)](https://sepolia.etherscan.io/)
+[![License](https://img.shields.io/badge/License-ISC-informational)](./package.json)
+[![GitHub](https://img.shields.io/badge/GitHub-Xeno--Labs%2FHoldr-181717?logo=github)](https://github.com/Xeno-Labs/Holdr)
 
 ---
 
