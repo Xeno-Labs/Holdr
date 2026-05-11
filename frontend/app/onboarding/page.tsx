@@ -4,7 +4,14 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccount, useWriteContract } from 'wagmi';
-import { ArrowLeft, ArrowRight, Building2, Globe, MapPin, Share2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Globe,
+  MapPin,
+  Share2,
+} from 'lucide-react';
 import {
   type FounderProfile,
   saveFounderProfile,
@@ -15,7 +22,7 @@ import {
 import { ADDRESSES, ROUND_FACTORY_ABI } from '@/lib/contracts';
 import { useTxToast } from '@/components/ui/Toast';
 
-const inter = "font-[family-name:var(--font-inter),sans-serif]";
+const inter = 'font-[family-name:var(--font-inter),sans-serif]';
 
 type Step = 1 | 2 | 3;
 
@@ -123,11 +130,15 @@ function OnboardingContent() {
   if (!isConnected || !address) {
     return (
       <div className={`mx-auto max-w-lg px-6 py-20 text-center ${inter}`}>
-        <Building2 className="mx-auto size-10 text-[#8624FF]" strokeWidth={1.25} />
-        <h1 className="mt-4 text-xl font-semibold text-zinc-900">Company onboarding</h1>
+        <Building2
+          className="mx-auto size-10 text-[#8624FF]"
+          strokeWidth={1.25}
+        />
+        <h1 className="mt-4 text-xl font-semibold text-zinc-900">
+          Company onboarding
+        </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Connect your wallet to save company information. Data is stored in this browser unless you
-          pin it to IPFS and record it on-chain.
+          Connect your wallet to save company information.
         </p>
       </div>
     );
@@ -144,12 +155,17 @@ function OnboardingContent() {
         </Link>
 
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[11px] font-mono uppercase tracking-widest text-[#8624FF]">Onboarding</span>
+          <span className="text-[11px] font-mono uppercase tracking-widest text-[#8624FF]">
+            Onboarding
+          </span>
           <span className="text-xs text-zinc-400">Step {step} of 3</span>
         </div>
-        <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Company profile</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">
+          Company profile
+        </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Investors see pinned details after you record an IPFS CID on-chain. Otherwise this device only.
+          Investors see pinned details after you record an IPFS CID on-chain.
+          Otherwise this device only.
         </p>
 
         <div className="mt-2 flex gap-1">
@@ -167,7 +183,9 @@ function OnboardingContent() {
           {step === 1 && (
             <>
               <div>
-                <label className="text-sm font-medium text-zinc-800">Company display name</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  Company display name
+                </label>
                 <input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
@@ -176,7 +194,9 @@ function OnboardingContent() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-800">Legal entity name</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  Legal entity name
+                </label>
                 <input
                   value={legalName}
                   onChange={(e) => setLegalName(e.target.value)}
@@ -185,7 +205,9 @@ function OnboardingContent() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-800">Website</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  Website
+                </label>
                 <div className="relative mt-1.5">
                   <Globe className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
                   <input
@@ -202,7 +224,9 @@ function OnboardingContent() {
           {step === 2 && (
             <>
               <div>
-                <label className="text-sm font-medium text-zinc-800">Jurisdiction</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  Jurisdiction
+                </label>
                 <div className="relative mt-1.5">
                   <MapPin className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
                   <input
@@ -214,19 +238,25 @@ function OnboardingContent() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-800">Entity type</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  Entity type
+                </label>
                 <select
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value)}
                   className="mt-1.5 w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:border-[#8624FF]/40 focus:outline-none focus:ring-2 focus:ring-[#8624FF]/15"
                 >
-                  {['Delaware C-Corp', 'Delaware LLC', 'UK Ltd', 'Cayman exempted company', 'Other'].map(
-                    (o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ),
-                  )}
+                  {[
+                    'Delaware C-Corp',
+                    'Delaware LLC',
+                    'UK Ltd',
+                    'Cayman exempted company',
+                    'Other',
+                  ].map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
                 </select>
               </div>
             </>
@@ -235,7 +265,9 @@ function OnboardingContent() {
           {step === 3 && (
             <>
               <div>
-                <label className="text-sm font-medium text-zinc-800">X / Twitter</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  X / Twitter
+                </label>
                 <input
                   value={twitter}
                   onChange={(e) => setTwitter(e.target.value)}
@@ -244,7 +276,9 @@ function OnboardingContent() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-800">LinkedIn</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  LinkedIn
+                </label>
                 <input
                   value={linkedin}
                   onChange={(e) => setLinkedin(e.target.value)}
@@ -253,7 +287,9 @@ function OnboardingContent() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-800">Contact email</label>
+                <label className="text-sm font-medium text-zinc-800">
+                  Contact email
+                </label>
                 <input
                   type="email"
                   value={email}
@@ -320,16 +356,17 @@ function OnboardingContent() {
 
           {pinError && (
             <p className="text-xs text-red-600 border border-red-100 bg-red-50 rounded-lg px-3 py-2">
-              {pinError}. You can still use &quot;Save locally & continue&quot; or set{' '}
-              <code className="font-mono">PINATA_JWT</code> in <code className="font-mono">.env.local</code>.
+              {pinError}. You can still use &quot;Save locally & continue&quot;
+              or set <code className="font-mono">PINATA_JWT</code> in{' '}
+              <code className="font-mono">.env.local</code>.
             </p>
           )}
         </div>
 
         <p className="mt-6 text-xs text-zinc-400 leading-relaxed">
           <Building2 className="inline size-3.5 mr-1 align-text-bottom text-zinc-400" />
-          This flow does not create a legal relationship. Company fields are for credibility in the product
-          UI only.
+          This flow does not create a legal relationship. Company fields are for
+          credibility in the product UI only.
         </p>
       </div>
     </div>

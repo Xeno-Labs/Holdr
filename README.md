@@ -1,166 +1,304 @@
 # Holdr
 
-**Encrypted capital markets for private companies** — a SAFE-style fundraise and cap table where per-investor allocations, ownership math, and subscription checks stay **encrypted on-chain** by default, using **Zama FHEVM** (fully homomorphic encryption on Ethereum).
+## Encrypted capital markets for private companies
 
-Same round URL. Same on-chain data. **Three different experiences:** founders see the full cap table, each investor sees only their row, and the public sees metadata plus the aggregate raise after close.
+Holdr is a confidential fundraising and cap-table protocol for private companies. It brings SAFE-style rounds, investor allocations, subscription settlement, and ownership records on-chain without exposing the sensitive numbers that make private markets private.
 
----
+The core product idea is simple:
 
-## Table of contents
+**One round. One URL. One source of truth. Three different views.**
 
-- [Why Holdr exists](#why-holdr-exists)
-- [What you can do with this MVP](#what-you-can-do-with-this-mvp)
-- [How it works (high level)](#how-it-works-high-level)
-- [Architecture](#architecture)
-- [Repository layout](#repository-layout)
-- [Tech stack](#tech-stack)
-- [Getting started](#getting-started)
-- [Scripts](#scripts)
-- [Documentation](#documentation)
-- [License](#license)
+- **Founders** see the full cap table.
+- **Investors** see only their own allocation and position.
+- **The public** sees round metadata and aggregate outcomes, never individual check sizes.
+
+Holdr is built on **Zama FHEVM**, using fully homomorphic encryption so smart contracts can compute over encrypted allocations instead of forcing private company data into the open.
 
 ---
 
-## Why Holdr exists
+## The problem
 
-Putting a traditional cap table on a public chain exposes every stakeholder: check sizes, ownership percentages, dilution, and compensation signals leak to competitors and the market. Most serious cap-table products therefore stay off-chain, even though programmable equity, automated dilution, and composable ownership records are natural fits for smart contracts.
+Private equity is one of the largest real-world asset classes, but it is still mostly trapped in off-chain systems. Carta, Pulley, AngelList, PDFs, spreadsheets, side letters, and manual investor updates exist because public blockchains have a brutal default:
 
-Holdr explores the opposite: **keep sensitive quantities as ciphertext on-chain**, while still allowing the protocol to:
+**If the data is on-chain, everyone can read it.**
 
-- Validate that an investor’s confidential payment matches their confidential allocation.
-- Compute **aggregate** raised under FHE and reveal only that aggregate publicly when the round closes.
-- Gate **per-wallet decryption** so founders, investors, and third parties see only what policy allows (including selective disclosure).
+That breaks cap tables immediately. A public cap table leaks:
 
----
+- Every investor's check size.
+- Every ownership percentage.
+- Founder dilution.
+- Employee compensation signals.
+- Round-by-round pricing pressure.
+- Competitive information before the company is ready to disclose it.
 
-## What you can do with this MVP
+This is why cap tables have not moved meaningfully on-chain, even though equity should be programmable: automated issuance, instant settlement, composable ownership, auditable state, and clean downstream integrations are exactly what smart contracts are good at.
 
-| Actor | Experience |
-|--------|------------|
-| **Founder** | Create a round (public name, target, deadline), add investors with **encrypted** allocations, open the round, and view the **full** cap table when connected with the founder wallet. |
-| **Investor** | Open the shared round page, decrypt **only their** allocation, subscribe with **confidential** USDT (cUSDT / ERC-7984-style flow), receive **confidential equity** (cEquity), and use portfolio / disclosure flows where implemented. |
-| **Public** | Same round URL: see round metadata and, after close, **aggregate** raised — not per-investor amounts. |
-
-Additional pieces in this repo:
-
-- **InvestorCredential** — soulbound-style participation NFT minted when investors are added (when the credential contract is wired); documents wiring in [`DEPLOYMENT.md`](DEPLOYMENT.md).
-- **Founder onboarding / IPFS** — optional Pinata-backed profile pinning (see deployment doc and `frontend/.env.local`).
+Holdr is the missing privacy layer for that market.
 
 ---
 
-## How it works (high level)
+## Why this needs FHE
 
-1. **RoundFactory** stores public round metadata (founder, name, target, deadline, status).
-2. **Allocations** stores **encrypted** per-investor commitment amounts (`euint64`) and subscription flags; coordinates with subscription, disclosure, and credential contracts.
-3. **Subscription** moves **encrypted** cUSDT into escrow and enforces FHE equality between payment and allocation; on success, **cEquity** (confidential ERC-20 style token) represents the position.
-4. **Disclosure** lets an investor **grant** decryption of their allocation handle to a counterparty (e.g. diligence) without making the whole table public.
-5. The **Next.js** app uses **wagmi / viem** for chain calls and **`@zama-fhe/relayer-sdk`** in the browser to encrypt inputs and decrypt handles the user is allowed to see.
+This is not a problem that a simple hash, Merkle proof, private database, or basic zero-knowledge proof solves cleanly.
 
-Privacy is enforced at **ciphertext + access control** — the chain does not need to know *who* is viewing the page; decryption permissions follow the connected wallet and on-chain `TFHE.allow`-style policies.
+A cap table is not one hidden fact. It is a living financial object with different disclosure rules for different people:
+
+- The founder needs the full table.
+- Each investor needs only their own row.
+- A future lead investor or auditor may need temporary selective access.
+- The public may need aggregate outcomes.
+- The contract still needs to validate and compute over the hidden values.
+
+That is exactly the shape of an FHE problem.
+
+Holdr stores investor allocations as encrypted values, then uses FHE-aware contracts to validate confidential subscriptions, compute aggregate raise outcomes, and grant wallet-specific decryption rights. The sensitive data remains ciphertext on-chain while the protocol continues to enforce business logic.
 
 ---
 
-## Architecture
+## What Holdr does
 
+Holdr turns a private fundraise into a confidential on-chain workflow:
+
+| Flow | What happens |
+|------|--------------|
+| **Create a round** | A founder creates a round with public metadata: name, target raise, deadline, and status. |
+| **Add investors** | Investor addresses are added with encrypted allocation amounts. The committed amounts are not publicly readable. |
+| **Open the round** | The founder opens the round once allocations are ready. |
+| **Subscribe confidentially** | Investors fund their allocation with confidential cUSDT. The contract validates encrypted payment amount against encrypted allocation amount. |
+| **Issue confidential equity** | Investors receive cEquity representing their position without broadcasting the position size. |
+| **Reveal only aggregates** | The round can expose aggregate raised while individual allocations remain hidden. |
+| **Selectively disclose** | Investors can grant specific counterparties access to their position for diligence, audits, or future financing. |
+
+The result is a cap table that behaves like financial infrastructure, not a public spreadsheet.
+
+---
+
+## The signature demo
+
+The most important screen in Holdr is the shared round page:
+
+```text
+/round/[id]
 ```
-┌─────────────────────────────────────────┐
-│  Next.js frontend                        │
-│  wagmi · viem · @zama-fhe/relayer-sdk  │
-└──────────────────┬──────────────────────┘
-                   │ RPC + FHE relayer
-                   ▼
-┌─────────────────────────────────────────┐
-│  RoundFactory                           │
-│  Allocations (encrypted allocations)    │
-│  Subscription · cEquity · Disclosure    │
-│  InvestorCredential (optional NFT)      │
-└──────────────────┬──────────────────────┘
-                   │
-         Confidential stablecoin (cUSDT)
-         + Zama FHEVM / decryption oracle
+
+Three people open the same link:
+
+| Viewer | What they see |
+|--------|---------------|
+| **Founder wallet** | Full cap table: investor rows, allocations, ownership context, and round controls. |
+| **Investor wallet** | Their own allocation and position; other investor amounts stay locked. |
+| **Disconnected / public user** | Public metadata and aggregate figures only; all per-investor data remains hidden. |
+
+This is the moment where the project clicks:
+
+**Same URL. Same on-chain state. Different decryption rights.**
+
+The chain is not serving three different datasets. It is serving one encrypted source of truth, and the connected wallet determines what can be decrypted.
+
+---
+
+## Why it is strong
+
+Holdr is built around a real, high-value privacy problem rather than a toy encrypted counter.
+
+| Strength | Why it matters |
+|----------|----------------|
+| **Confidential finance by default** | Allocations, subscriptions, and ownership data are sensitive financial information, not decorative private fields. |
+| **Real-world asset use case** | Private equity is a massive RWA category that cannot move on-chain without confidentiality. |
+| **FHE-native architecture** | The contracts compute over encrypted allocation data and enforce encrypted payment checks. |
+| **Role-based decryption** | Founder, investor, public, and third-party disclosure experiences come from permissioned decryption, not duplicated databases. |
+| **Composability path** | cUSDT and cEquity model how confidential tokens can plug into issuance and settlement flows. |
+| **Clear demo** | Two wallets and one URL are enough to show why FHE changes what can be built on-chain. |
+
+---
+
+## System architecture
+
+```text
+                         +------------------------------+
+                         |        Next.js frontend       |
+                         |  wagmi / viem / relayer SDK  |
+                         +---------------+--------------+
+                                         |
+                                         | encrypt inputs
+                                         | request decryptions
+                                         v
++------------------+     +---------------+--------------+     +------------------+
+|   RoundFactory   | --> |          Allocations          | --> |   Disclosure     |
+| public metadata  |     | encrypted investor amounts    |     | selective views  |
++------------------+     +---------------+--------------+     +------------------+
+                                         |
+                                         | validates encrypted payment
+                                         v
+                         +---------------+--------------+
+                         |          Subscription         |
+                         | confidential cUSDT escrow     |
+                         +---------------+--------------+
+                                         |
+                                         | mints confidential ownership
+                                         v
+                         +---------------+--------------+
+                         |            cEquity            |
+                         | encrypted investor balances   |
+                         +------------------------------+
+
+Optional: InvestorCredential issues a soulbound participation credential when wired.
 ```
 
-Solidity contracts live under [`contracts/`](contracts/). The canonical deploy and wiring order is described in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+The protocol keeps public coordination data public and private economic data encrypted:
+
+| Data | Visibility |
+|------|------------|
+| Round name, founder, target, deadline, status | Public |
+| Investor addresses | Public / observable |
+| Investor allocation amounts | Encrypted |
+| Subscription amount checks | Computed under FHE |
+| cEquity balances | Confidential token balances |
+| Aggregate raised | Public after close / reveal flow |
+| Selective disclosure | Granted to specific wallets |
+
+---
+
+## Smart contracts
+
+The Solidity system lives in [`contracts/`](contracts/):
+
+| Contract | Role |
+|----------|------|
+| [`RoundFactory.sol`](contracts/RoundFactory.sol) | Creates rounds, stores public metadata, tracks lifecycle state, and records founder profile CIDs. |
+| [`Allocations.sol`](contracts/Allocations.sol) | Stores encrypted per-investor allocations and coordinates subscription, disclosure, and credential issuance. |
+| [`Subscription.sol`](contracts/Subscription.sol) | Handles investor subscription flow, validates confidential payment against encrypted allocation, and triggers equity issuance. |
+| [`cEquity.sol`](contracts/cEquity.sol) | Confidential equity token representing investor ownership positions. |
+| [`Disclosure.sol`](contracts/Disclosure.sol) | Grants controlled view access to encrypted allocation handles. |
+| [`InvestorCredential.sol`](contracts/InvestorCredential.sol) | Soulbound-style investor participation NFT minted through allocations when configured. |
+| [`mocks/`](contracts/mocks/) | Local development mocks for USDT / cUSDT-style flows. |
+
+Deployment order, one-time wiring calls, and credential rewiring are documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+---
+
+## Frontend
+
+The app in [`frontend/`](frontend/) is a Next.js interface for the full workflow:
+
+| Route | Purpose |
+|-------|---------|
+| [`/`](frontend/app/page.tsx) | Landing page and product narrative. |
+| [`/onboarding`](frontend/app/onboarding/page.tsx) | Founder onboarding and optional IPFS-backed profile setup. |
+| [`/founder/new`](frontend/app/founder/new/page.tsx) | Round creation flow with investor allocation entry. |
+| [`/round/[id]`](frontend/app/round/%5Bid%5D/page.tsx) | Unified role-aware round page: founder, investor, or public view. |
+| [`/rounds`](frontend/app/rounds/page.tsx) | Round discovery / navigation surface. |
+| [`/portfolio`](frontend/app/portfolio/page.tsx) | Investor portfolio surface. |
+
+The frontend uses:
+
+- **wagmi** and **viem** for wallet and contract interactions.
+- **`@zama-fhe/relayer-sdk`** for encryption/decryption flows.
+- **Next.js 16**, **React 19**, and **Tailwind 4** for the application layer.
 
 ---
 
 ## Repository layout
 
-| Path | Purpose |
-|------|---------|
-| [`contracts/`](contracts/) | FHE-aware Solidity: factory, allocations, subscription, cEquity, disclosure, investor credential, mocks. |
-| [`scripts/`](scripts/) | `deploy.ts`, seed/interact helpers, credential-only deploy. |
-| [`test/`](test/) | Hardhat tests for contracts. |
-| [`frontend/`](frontend/) | Next.js app (App Router), UI, wallet, relayer SDK integration. |
-| [`DEPLOYMENT.md`](DEPLOYMENT.md) | Deploy prerequisites, wiring table, `deployed.json` / `.env.local` outputs, credential rewiring. |
-| [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | Step-by-step demo narrative. |
-| [`holder prd.md`](holder%20prd.md) | Product requirements and Season 2 submission framing (internal PRD). |
+```text
+.
+|-- contracts/          # Solidity contracts and mocks
+|-- scripts/            # Deploy, seed, interact, and credential rewiring scripts
+|-- test/               # Hardhat contract tests
+|-- frontend/           # Next.js application
+|-- DEPLOYMENT.md       # Deployment and contract wiring guide
+|-- holder prd.md       # Product requirements and FHE design notes
+`-- README.md
+```
 
 ---
 
 ## Tech stack
 
-| Layer | Choices |
-|--------|---------|
-| **Smart contracts** | Solidity 0.8.24, Hardhat, **@fhevm/hardhat-plugin**, **fhevm** |
-| **Frontend** | Next.js 16, React 19, Tailwind 4, **wagmi** + **viem**, **@zama-fhe/relayer-sdk** |
-| **Networks** | Local Hardhat chain; **Sepolia** for testnet deployment |
+| Layer | Technology |
+|-------|------------|
+| Smart contracts | Solidity 0.8.24, Hardhat, OpenZeppelin |
+| FHE | Zama FHEVM, `fhevm`, `@fhevm/hardhat-plugin` |
+| Confidential tokens | cUSDT / cEquity ERC-7984-style flows |
+| Frontend | Next.js 16, React 19, Tailwind 4 |
+| Wallet / RPC | wagmi, viem |
+| Encryption client | `@zama-fhe/relayer-sdk` |
+| Networks | Local Hardhat, Sepolia |
 
 ---
 
-## Getting started
+## Quick start
 
 ### Prerequisites
 
-- **Node.js** (LTS recommended)
-- **npm** at the repository root
+- Node.js
+- npm
+- A wallet for Sepolia deployments
+- Sepolia RPC URL for testnet deployment
 
-### 1. Install dependencies
+### Install dependencies
 
 ```bash
 npm install
 cd frontend && npm install && cd ..
 ```
 
-### 2. Local chain and deploy
+### Run locally
 
-Terminal A — start a local node:
+Start a local Hardhat node:
 
 ```bash
 npm run node
 ```
 
-Terminal B — deploy and wire contracts:
+In a second terminal, deploy and wire the contracts:
 
 ```bash
 npm run deploy:local
 ```
 
-This updates **`deployed.json`** and writes **`frontend/.env.local`** with `NEXT_PUBLIC_*` addresses. Restart the frontend dev server if it was already running.
+The deploy script writes:
 
-Optional — seed demo data:
+- [`deployed.json`](deployed.json) with contract addresses.
+- `frontend/.env.local` with `NEXT_PUBLIC_*` addresses for the app.
+
+Optionally seed demo data:
 
 ```bash
 npm run seed:local
 ```
 
-### 3. Run the frontend
+Start the frontend:
 
 ```bash
 cd frontend && npm run dev
 ```
 
-Open the URL printed by Next.js (typically `http://localhost:3000`).
+Open the local URL printed by Next.js, usually:
 
-### Sepolia and production-like setup
+```text
+http://localhost:3000
+```
 
-Set `PRIVATE_KEY` and `SEPOLIA_RPC_URL` in a root `.env`, then:
+---
+
+## Sepolia deployment
+
+Create a root `.env` with:
+
+```bash
+PRIVATE_KEY=0x...
+SEPOLIA_RPC_URL=https://...
+ETHERSCAN_API_KEY=...
+```
+
+Deploy:
 
 ```bash
 npm run deploy:sepolia
 ```
 
-Full wiring, optional Pinata JWT for IPFS pinning, and credential-only deploys are documented in **[`DEPLOYMENT.md`](DEPLOYMENT.md)**.
+The deploy script handles the full contract stack and writes frontend environment variables. For detailed order of operations, rewiring existing deployments, and optional Pinata/IPFS configuration, see [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ---
 
@@ -168,32 +306,64 @@ Full wiring, optional Pinata JWT for IPFS pinning, and credential-only deploys a
 
 | Command | Description |
 |---------|-------------|
-| `npm run compile` | Compile contracts with Hardhat. |
-| `npm run test` | Run contract tests. |
-| `npm run node` | Start local Hardhat node. |
-| `npm run deploy:local` | Deploy full stack to localhost and refresh `frontend/.env.local`. |
-| `npm run deploy:sepolia` | Deploy full stack to Sepolia. |
-| `npm run deploy:credential:local` / `deploy:credential:sepolia` | Deploy **InvestorCredential** only and rewire (see DEPLOYMENT). |
-| `npm run seed:local` / `seed:sepolia` | Seed script for demo data. |
-| `cd frontend && npm run dev` | Next.js development server. |
-| `cd frontend && npm run build` | Production build. |
+| `npm run compile` | Compile Solidity contracts. |
+| `npm run test` | Run Hardhat tests. |
+| `npm run node` | Start a local Hardhat chain. |
+| `npm run deploy:local` | Deploy the full protocol locally. |
+| `npm run deploy:sepolia` | Deploy the full protocol to Sepolia. |
+| `npm run deploy:credential:local` | Deploy and wire only `InvestorCredential` locally. |
+| `npm run deploy:credential:sepolia` | Deploy and wire only `InvestorCredential` on Sepolia. |
+| `npm run seed:local` | Seed local demo data. |
+| `npm run seed:sepolia` | Seed Sepolia demo data. |
+| `cd frontend && npm run dev` | Run the frontend development server. |
+| `cd frontend && npm run build` | Build the frontend. |
+
+---
+
+## Demo narrative
+
+The canonical demo is designed to be understood in under three minutes:
+
+1. Show why public cap tables do not work.
+2. Create a private round as the founder.
+3. Add an investor with an encrypted allocation.
+4. Open the same round URL as the founder and see the full table.
+5. Switch to the investor wallet and decrypt only that investor's allocation.
+6. Disconnect and show the public view with locked investor rows.
+7. Show portfolio / credential / disclosure surfaces where relevant.
+
+Use [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) for the full recording script.
+
+---
+
+## Project status
+
+Holdr is an MVP submission for the Zama Developer Program Mainnet Season 2 Builder Track. The repo includes:
+
+- FHE-aware Solidity contracts.
+- Local and Sepolia deploy scripts.
+- Frontend flows for onboarding, round creation, role-aware round viewing, and portfolio surfaces.
+- Investor credential support.
+- Demo and deployment documentation.
+
+The current version is focused on the primary confidential issuance flow. Multiple share classes, vesting schedules, secondary trading, legal document generation, and KYC/accreditation workflows are intentionally out of scope for this MVP.
 
 ---
 
 ## Documentation
 
-- **[`DEPLOYMENT.md`](DEPLOYMENT.md)** — environment variables, deploy order, on-chain wiring, IPFS / Pinata, troubleshooting existing deployments.
-- **[`DEMO_SCRIPT.md`](DEMO_SCRIPT.md)** — guided demo for pitches or judges.
-- **[`holder prd.md`](holder%20prd.md)** — detailed PRD: user stories, contract sketches, FHE design table.
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) - deployment, environment variables, contract wiring, and credential rewiring.
+- [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) - polished three-minute demo flow.
+- [`holder prd.md`](holder%20prd.md) - product requirements, target users, and FHE design notes.
 
 ---
 
 ## License
 
-[ISC](package.json) (see root `package.json`).
+ISC. See [`package.json`](package.json).
 
 ---
 
 ## Acknowledgements
 
-Built with **[Zama FHEVM](https://github.com/zama-ai/fhevm)** and confidential token patterns (e.g. ERC-7984-style cUSDT / cEquity) suitable for **Zama Developer Program** and similar hackathon or research tracks.
+Built with [Zama FHEVM](https://github.com/zama-ai/fhevm) and confidential token patterns for private-market infrastructure.
