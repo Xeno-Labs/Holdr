@@ -2,7 +2,7 @@
 
 ## Encrypted capital markets for private companies
 
-**Holdr** is confidential fundraising and cap-table infrastructure on Ethereum: SAFE-style rounds, encrypted allocations, cUSDT subscriptions, and confidential equity—without publishing every investor’s check size. **Same round URL, three views:** founders see the full table, investors see only their row, everyone else sees metadata and aggregates. Powered by **Zama FHEVM** (fully homomorphic encryption).
+**Holdr** is confidential fundraising and cap-table infrastructure on Ethereum: SAFE-style rounds, encrypted allocations, cUSDT subscriptions, and confidential equity, without publishing every investor’s check size. **Same round URL, three views:** founders see the full table, investors see only their row, everyone else sees metadata and aggregates. Powered by **Zama FHEVM** (fully homomorphic encryption).
 
 ## Table of contents
 
